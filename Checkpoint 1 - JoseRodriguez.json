@@ -1,0 +1,184 @@
+{
+  "name": "Checkpoint 1 - Asistente de Triaje de Consultas de Clientes",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "dec61557-6220-426c-b273-468c8272a29c",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        16
+      ],
+      "webhookId": "3b243d44-669b-4e30-bf87-f67cee8a7176"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "id": "e0c000e0-63d1-42de-a65e-fc0e4f072aa4",
+      "name": "Anthropic Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        544,
+        240
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "2yjl6wTyxe6Bbql3",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "ROL Y ÁMBITO:\nEres un Asistente de Triaje de Consultas de Clientes para una agencia de contenido digital. Tu función es clasificar los mensajes entrantes de clientes y decidir la acción correspondiente. No tienes autorización para modificar contratos, cancelar servicios, prometer plazos de entrega, ni resolver reclamos formales por tu cuenta.\n\nOBJETIVO OPERATIVO:\nTu meta es analizar cada consulta entrante, clasificarla en una de estas categorías (duda simple, pedido de cambio de contenido, consulta de estado de pieza, o reclamo), y registrar esa clasificación de forma limpia y estructurada para el equipo.\n\nREGLAS DE USO DE HERRAMIENTAS:\nAntes de registrar la consulta, verifica que tengas identificado el nombre del cliente y el tipo de consulta. Usa la herramienta de Google Sheets para registrar cada consulta clasificada con estos datos: nombre del cliente, tipo de consulta, resumen breve del mensaje, y fecha.\n\nPROTOCOLO DE ESCALAMIENTO (GUARDRAILS):\nSi detectas que la consulta es un reclamo formal, o si el cliente solicita algo fuera de tu ámbito (cambios de contrato, cancelaciones, reembolsos), detén tu ciclo de inmediato, registra la consulta como 'Reclamo - Requiere revisión humana' y responde: 'Tu consulta fue derivada a revisión humana, en breve te contactaremos.'",
+          "maxIterations": 7,
+          "returnIntermediateSteps": true
+        }
+      },
+      "id": "39b86d6c-6481-466b-a6dc-70bd41584f83",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        544,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra en Google Sheets cada consulta de cliente ya clasificada. Úsala SIEMPRE después de determinar la categoría de la consulta (duda simple, pedido de cambio de contenido, consulta de estado de pieza, o Reclamo - Requiere revisión humana). Debes pasarle: nombre del cliente, tipo de consulta, resumen breve del mensaje original, y la fecha de la consulta. No la uses para leer datos, solo para registrar.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1nUuM1aJnla1wXViGVAkruyclw3B_e1hsbt7cVLzs8rk",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "n8n test",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Cliente": "={{ $fromAI('cliente', 'Nombre del cliente que hace la consulta') }}",
+            "Tipo de Consulta": "={{ $fromAI('tipo_consulta', 'Categoria: duda simple, pedido de cambio de contenido, consulta de estado de pieza, o Reclamo - Requiere revision humana') }}",
+            "Resumen": "={{ $fromAI('resumen', 'Resumen breve del mensaje del cliente') }}",
+            "Fecha": "={{ $fromAI('fecha', 'Fecha de la consulta en formato AAAA-MM-DD') }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "b56f24a4-85bf-4ff8-a7a2-81500246f562",
+      "name": "Registrar Consulta (Google Sheets)",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        768,
+        240
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eevtC5pGcZxKbEoL",
+          "name": "Google Sheets - jdra56@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "jdra56@gmail.com",
+        "subject": "=Nueva consulta de cliente triada: {{ $json.output }}",
+        "message": "=El Asistente de Triaje procesó una nueva consulta de cliente.\n\nResultado del agente:\n{{ $json.output }}\n\nRevisa la planilla de registro para más detalle.",
+        "options": {}
+      },
+      "id": "c32fd8c2-9c53-473b-b914-94fc9fe3e0fc",
+      "name": "Notificar al Equipo (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        992,
+        16
+      ],
+      "webhookId": "6849dd83-86bb-49a9-9384-b7493f694f36",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Zz6wVEcGZEqs0HEQ",
+          "name": "Gmail account jdra56@gmail.com"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Consulta (Google Sheets)": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Notificar al Equipo (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "134cd7cc-dde2-48b9-ab63-4ecb98e21c50",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7949f4448433b601f5c1c477d10934d2f204851e1e2c5d364069e043f1c746ee"
+  },
+  "id": "ZZojoyqVVPLA3FSJ",
+  "tags": []
+}
